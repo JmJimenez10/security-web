@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Checkout Código') {
             steps {
-                git branch: 'main', url: 'https://github.com/tuusuario/turepo.git'
+                git branch: 'main', url: 'https://github.com/JmJimenez10/security-web.git'
             }
         }
         stage('Build Maven') {
