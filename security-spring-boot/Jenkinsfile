@@ -3,21 +3,29 @@ pipeline {
     stages {
         stage('Checkout Código') {
             steps {
+                // Clonamos el repositorio completo para asegurarnos de que Jenkins tenga todo el código
                 git branch: 'main', url: 'https://github.com/JmJimenez10/security-web.git'
             }
         }
         stage('Build Maven') {
             steps {
-                sh './mvnw clean package -DskipTests'
+                // Entramos a la carpeta del backend donde está el pom.xml y mvnw
+                dir('security-spring-boot') {
+                    sh './mvnw clean package -DskipTests'
+                }
             }
         }
         stage('Build Imagen Docker') {
             steps {
-                sh 'docker build -t backend-app:latest .'
+                // Entramos a la carpeta donde está el Dockerfile y lo construimos
+                dir('security-spring-boot') {
+                    sh 'docker build -t backend-app:latest .'
+                }
             }
         }
         stage('Run Contenedor Docker') {
             steps {
+                // Ejecutamos el contenedor de Docker usando la imagen creada
                 sh '''
                     docker rm -f backend-container || true
                     docker run -d --name backend-container -p 8080:8080 backend-app:latest
