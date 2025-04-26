@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+    stages {
+        stage('Checkout Código') {
+            steps {
+                git branch: 'main', url: 'https://github.com/tuusuario/turepo.git'
+            }
+        }
+        stage('Build Maven') {
+            steps {
+                sh './mvnw clean package -DskipTests'
+            }
+        }
+        stage('Build Imagen Docker') {
+            steps {
+                sh 'docker build -t backend-app:latest .'
+            }
+        }
+        stage('Run Contenedor Docker') {
+            steps {
+                sh '''
+                    docker rm -f backend-container || true
+                    docker run -d --name backend-container -p 8080:8080 backend-app:latest
+                '''
+            }
+        }
+    }
+}
