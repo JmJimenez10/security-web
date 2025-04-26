@@ -17,6 +17,7 @@ import dev.jmjimenez.security_spring_boot.service.impl.CustomUserDetailsService;
 import dev.jmjimenez.security_spring_boot.utility.JWTUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -33,55 +34,69 @@ public class JWTAuthFilter extends OncePerRequestFilter {
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-			throws ServletException, IOException {
+	        throws ServletException, IOException {
 
-		final String authHeader = request.getHeader("Authorization");
-		final String jwtToken;
-		final String userEmail;
+	    final String authHeader = request.getHeader("Authorization");
+	    final String jwtToken;
+	    final String userEmail;
 
-		// Si no hay cabecera de Authorization, pasar al siguiente filtro
-		if (authHeader == null || authHeader.isBlank()) {
-			filterChain.doFilter(request, response);
-			return;
-		}
+	    // Primero, intenta obtener el token de las cookies (como HttpOnly)
+	    jwtToken = getCookieValue(request, "access_token");
 
-		try {
-			// Eliminar "Bearer" del token
-			jwtToken = authHeader.substring(7);
-			userEmail = jwtUtils.extractUsername(jwtToken);
+	    if (jwtToken == null && (authHeader == null || authHeader.isBlank())) {
+	        filterChain.doFilter(request, response);
+	        return;
+	    }
 
-			if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-				UserDetails userDetails = customUserDetailsService.loadUserByUsername(userEmail);
+	    try {
+	        // Si el token se obtuvo de las cookies, o de la cabecera, procedemos
+	        if (jwtToken != null) {
+	            userEmail = jwtUtils.extractUsername(jwtToken);
 
-				// Verificar si el token es válido
-				if (jwtUtils.isValidToken(jwtToken, userDetails, request, "access")) {
-					// Si el token es válido, establecer el contexto de seguridad
-					SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-					UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(userDetails,
-							null, userDetails.getAuthorities());
+	            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+	                UserDetails userDetails = customUserDetailsService.loadUserByUsername(userEmail);
 
-					token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-					securityContext.setAuthentication(token);
-					SecurityContextHolder.setContext(securityContext);
+	                // Verificar si el token es válido
+	                if (jwtUtils.isValidToken(jwtToken, userDetails, request, "access")) {
+	                    // Si el token es válido, establecer el contexto de seguridad
+	                    SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+	                    UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(userDetails,
+	                            null, userDetails.getAuthorities());
 
-				} else {
-					logger.warn("Token inválido o expirado para el usuario: {}", userEmail);
-					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
-					response.setContentType("application/json");
-					response.getWriter().write("{\"error\": \"Token inválido o expirado\"}");
-					return; // Detener el flujo si el token no es válido
-				}
+	                    token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+	                    securityContext.setAuthentication(token);
+	                    SecurityContextHolder.setContext(securityContext);
+	                } else {
+	                    logger.warn("Token inválido o expirado para el usuario: {}", userEmail);
+	                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+	                    response.setContentType("application/json");
+	                    response.getWriter().write("{\"error\": \"Token inválido o expirado\"}");
+	                    return; // Detener el flujo si el token no es válido
+	                }
+	            }
+	        }
+	    } catch (Exception e) {
+	        logger.error("Error al procesar el token JWT", e);
+	        response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+	        response.setContentType("application/json");
+	        response.getWriter().write("{\"error\": \"Error al procesar el token\"}");
+	        return;
+	    }
 
-			}
-		} catch (Exception e) {
-			logger.error("Error al procesar el token JWT", e);
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 401 Unauthorized
-			response.setContentType("application/json");
-			response.getWriter().write("{\"error\": \"Error al procesar el token\"}");
-			return;
-		}
-		
-		// Continuar con la cadena de filtros
-		filterChain.doFilter(request, response);
+	    // Continuar con la cadena de filtros
+	    filterChain.doFilter(request, response);
 	}
+
+	private String getCookieValue(HttpServletRequest request, String cookieName) {
+	    // Buscar en las cookies
+	    if (request.getCookies() != null) {
+	        for (Cookie cookie : request.getCookies()) {
+	            if (cookie.getName().equals(cookieName)) {
+	                return cookie.getValue();
+	            }
+	        }
+	    }
+	    return null;
+	}
+
 }

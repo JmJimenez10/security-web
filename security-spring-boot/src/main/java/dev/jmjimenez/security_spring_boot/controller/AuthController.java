@@ -74,5 +74,11 @@ public class AuthController {
 	    }
 	    return null; // Si no se encuentra, devolver null
 	}
-
+	
+	// Endpoint para hacer logout
+	@PostMapping("/logout")
+	@ResponseStatus(HttpStatus.OK)
+	public void logout(HttpServletResponse response) {
+	    authService.logout(response);
+	}
 }

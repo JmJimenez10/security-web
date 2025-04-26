@@ -95,21 +95,32 @@ public class JWTUtils {
 	}
 
 	public boolean isValidToken(String token, UserDetails userDetails, HttpServletRequest request, String type) {
-		String userIp = request.getHeader("X-Forward-For");
-		if (userIp == null || userIp.isEmpty())
-			userIp = request.getRemoteAddr();
+	    String userIp = request.getHeader("X-Forwarded-For");
+	    if (userIp == null || userIp.isEmpty())
+	        userIp = request.getRemoteAddr();
 
-		String userAgent = request.getHeader("User-Agent");
+	    String userAgent = request.getHeader("User-Agent");
 
-		final String username = extractUsername(token);
-		Integer tokenVersion = extractTokenVersion(token);
+	    final String username = extractUsername(token);
+	    Integer tokenVersion = extractTokenVersion(token);
 
-		User user = userRepository.findByEmail(username)
-				.orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+	    User user = userRepository.findByEmail(username)
+	            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
-		return username.equals(userDetails.getUsername()) && !isTokenExpired(token)
-				&& validateIpAndAgent(token, userIp, userAgent) && type.equals("refresh") ? isRefreshToken(token)
-						: !isRefreshToken(token) && tokenVersion.equals(user.getTokenVersion());
+	    // Comunes a ambos tipos
+	    boolean baseValid = username.equals(userDetails.getUsername())
+	            && !isTokenExpired(token)
+	            && validateIpAndAgent(token, userIp, userAgent);
+
+	    if (!baseValid) {
+	        return false;
+	    }
+
+	    if ("refresh".equals(type)) {
+	        return isRefreshToken(token) && tokenVersion.equals(user.getTokenVersion());
+	    } else {
+	        return !isRefreshToken(token) && tokenVersion.equals(user.getTokenVersion());
+	    }
 	}
 	
 	private boolean validateIpAndAgent(String token, String userIp, String userAgent) {

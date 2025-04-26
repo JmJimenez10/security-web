@@ -17,4 +17,6 @@ public interface AuthService {
 	
 	LoggedUserDTO getProfile();
 	
+	void logout(HttpServletResponse response);
+	
 }

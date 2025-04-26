@@ -175,4 +175,30 @@ public class AuthServiceImpl implements AuthService {
 		return LoggedUserDTO.builder().name(user.getName()).surnames(user.getSurnames()).phone(user.getPhone())
 				.email(user.getEmail()).roles(user.getRoles()).build();
 	}
+	
+	@Override
+	public void logout(HttpServletResponse response) {
+	    // Obtener usuario autenticado
+	    UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+	    User user = userRepository.findByEmail(userDetails.getUsername())
+	            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+	    // Incrementar tokenVersion
+	    user.setTokenVersion(user.getTokenVersion() + 1);
+	    userRepository.save(user);
+
+	    // Borrar cookies
+	    ResponseCookie deleteAccessCookie = ResponseCookie.from("access_token", "")
+	            .httpOnly(true).secure(true).sameSite("Strict").path("/").maxAge(0).build();
+	    ResponseCookie deleteRefreshCookie = ResponseCookie.from("refresh_token", "")
+	            .httpOnly(true).secure(true).sameSite("Strict").path("/").maxAge(0).build();
+	    ResponseCookie deleteCsrfCookie = ResponseCookie.from("csrf_token", "")
+	            .httpOnly(false).secure(true).sameSite("Strict").path("/").maxAge(0).build();
+
+	    response.addHeader(HttpHeaders.SET_COOKIE, deleteAccessCookie.toString());
+	    response.addHeader(HttpHeaders.SET_COOKIE, deleteRefreshCookie.toString());
+	    response.addHeader(HttpHeaders.SET_COOKIE, deleteCsrfCookie.toString());
+
+	    response.setStatus(HttpServletResponse.SC_OK);
+	}
 }

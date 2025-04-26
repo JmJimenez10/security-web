@@ -72,8 +72,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 				long secondsRemaining = remaining.getSeconds();
 
 				writeErrorResponse(response, HttpStatus.TOO_MANY_REQUESTS.value(), "Too Many Requests",
-						"Your IP has been temporarily blocked.", path, secondsRemaining); // nuevo parámetro
-				log.warn("IP temporarily blocked: " + ip);
+						"Your IP has been temporarily blocked.", path, secondsRemaining);
+				log.warn("IP temporarily blocked: " + ip + ". Remaining time (seconds): " + secondsRemaining);
 				return;
 			} else
 				// Se terminó el baneo, quitarlo
