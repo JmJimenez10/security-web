@@ -70,7 +70,7 @@ public class SecurityConfig {
 	    CorsConfiguration config = new CorsConfiguration();
 	    config.setAllowedOrigins(List.of("http://localhost:5173", "https://webprod.com"));
 	    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-	    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-CSRF-Token")); // Aquí añades 'X-CSRF-Token'
+	    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-CSRF-Token"));
 	    config.setAllowCredentials(true); // NECESARIO para cookies (HttpOnly)
 	    config.setMaxAge(3600L); // Opcional: para cachear la configuración
 
