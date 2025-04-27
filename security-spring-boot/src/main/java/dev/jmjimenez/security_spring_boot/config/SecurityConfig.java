@@ -36,8 +36,7 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-		httpSecurity.csrf(csrf -> csrf.disable())
-				.cors(cors -> cors.configurationSource(request -> new CorsConfiguration().applyPermitDefaultValues()))
+		httpSecurity.csrf(csrf -> csrf.disable()).cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.exceptionHandling(e -> e.authenticationEntryPoint(new Http401UnauthorizedEntryPoint())
 						.accessDeniedHandler((req, res, ex) -> {
@@ -68,16 +67,16 @@ public class SecurityConfig {
 
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("https://webprod.com"));
-		config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-		config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-		config.setAllowCredentials(true);
-		config.setMaxAge(3600L);
+	    CorsConfiguration config = new CorsConfiguration();
+	    config.setAllowedOrigins(List.of("http://localhost:5173", "https://webprod.com"));
+	    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+	    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-CSRF-Token")); // Aquí añades 'X-CSRF-Token'
+	    config.setAllowCredentials(true); // NECESARIO para cookies (HttpOnly)
+	    config.setMaxAge(3600L); // Opcional: para cachear la configuración
 
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/api/**", config);
-		return source;
+	    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+	    source.registerCorsConfiguration("/**", config); // Aplica a todas las rutas
+	    return source;
 	}
 
 	@Bean
